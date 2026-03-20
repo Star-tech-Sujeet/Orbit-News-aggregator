@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#06060f">
+<title>NewsOrbit — Circular News Aggregator</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{
+  width:100%;height:100%;overflow:hidden;
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+  background:#06060f;color:#e2e8f0;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ===== BACKGROUND ===== */
+.bg-canvas{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:linear-gradient(145deg,#06060f 0%,#0d0d1f 40%,#10102a 60%,#06060f 100%);
+}
+.bg-orb{position:fixed;border-radius:50%;filter:blur(120px);pointer-events:none;z-index:0}
+.bg-orb-1{width:600px;height:600px;background:radial-gradient(circle,rgba(99,102,241,.15),transparent 70%);top:-200px;left:-100px;animation:orbFloat1 25s ease-in-out infinite alternate}
+.bg-orb-2{width:500px;height:500px;background:radial-gradient(circle,rgba(139,92,246,.12),transparent 70%);bottom:-150px;right:-100px;animation:orbFloat2 30s ease-in-out infinite alternate}
+.bg-orb-3{width:400px;height:400px;background:radial-gradient(circle,rgba(34,211,238,.08),transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);animation:orbFloat3 20s ease-in-out infinite alternate}
+@keyframes orbFloat1{0%{transform:translate(0,0) scale(1)}50%{transform:translate(60px,40px) scale(1.1)}100%{transform:translate(-30px,80px) scale(.95)}}
+@keyframes orbFloat2{0%{transform:translate(0,0) scale(1)}50%{transform:translate(-50px,-30px) scale(1.15)}100%{transform:translate(40px,-60px) scale(.9)}}
+@keyframes orbFloat3{0%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-40%,-60%) scale(1.2)}100%{transform:translate(-60%,-40%) scale(.85)}}
+
+.star{position:fixed;border-radius:50%;background:#fff;pointer-events:none;z-index:0}
+@keyframes twinkle{0%,100%{opacity:.1}50%{opacity:.6}}
+
+.orbit-ring{position:absolute;border:1px solid rgba(99,102,241,.06);border-radius:50%;pointer-events:none;z-index:1}
+.orbit-ring-inner{position:absolute;border:1px dashed rgba(139,92,246,.04);border-radius:50%;pointer-events:none;z-index:1;animation:ringPulse 8s ease-in-out infinite}
+@keyframes ringPulse{0%,100%{opacity:.3;transform:scale(1)}50%{opacity:.6;transform:scale(1.02)}}
+
+/* ===== HEADER ===== */
+.header{
+  position:fixed;top:0;left:0;right:0;z-index:500;
+  padding:14px 20px;display:flex;align-items:center;justify-content:space-between;
+  background:linear-gradient(180deg,rgba(6,6,15,.92) 0%,transparent 100%);
+}
+.logo-group{display:flex;align-items:center;gap:10px}
+.logo-icon{
+  width:36px;height:36px;border-radius:50%;
+  background:linear-gradient(135deg,#6366f1,#8b5cf6);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 20px rgba(99,102,241,.3);flex-shrink:0;
+}
+.logo-icon svg{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.logo-text h1{font-size:16px;font-weight:700;letter-spacing:-.3px;color:#f8fafc;line-height:1.2}
+.logo-text span{font-size:10px;color:#6366f1;font-weight:600;letter-spacing:1px;text-transform:uppercase}
+.header-controls{display:flex;align-items:center;gap:8px}
+
+.search-wrap{position:relative;display:flex;align-items:center}
+.search-btn{
+  width:36px;height:36px;border-radius:50%;
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+  backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;color:#94a3b8;z-index:2;transition:all .3s ease;
+}
+.search-btn:hover{background:rgba(255,255,255,.1);color:#fff}
+.search-btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.search-input{
+  position:absolute;left:0;top:0;width:0;padding:0;border:none;border-radius:24px;
+  background:transparent;color:#e2e8f0;font-size:14px;font-family:inherit;outline:none;
+  opacity:0;transition:all .4s cubic-bezier(.4,0,.2,1);height:36px;
+}
+.search-input.expanded{
+  width:220px;padding:0 16px 0 42px;opacity:1;
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(20px);
+}
+.search-input.expanded:focus{border-color:rgba(99,102,241,.4);box-shadow:0 0 20px rgba(99,102,241,.1)}
+.search-input::placeholder{color:#64748b}
+
+.auto-btn{
+  display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:20px;
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+  backdrop-filter:blur(10px);color:#94a3b8;font-size:12px;font-weight:500;
+  cursor:pointer;font-family:inherit;transition:all .3s ease;white-space:nowrap;
+}
+.auto-btn:hover{background:rgba(255,255,255,.1);color:#fff}
+.auto-btn.active{background:rgba(99,102,241,.2);border-color:rgba(99,102,241,.4);color:#818cf8}
+.auto-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ===== CATEGORIES ===== */
+.categories{
+  position:fixed;top:66px;left:0;right:0;z-index:500;
+  display:flex;justify-content:center;gap:6px;padding:4px 16px;flex-wrap:wrap;
+}
+.cat-pill{
+  padding:6px 14px;border-radius:20px;font-size:12px;font-weight:500;
+  cursor:pointer;white-space:nowrap;user-select:none;
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+  color:#94a3b8;display:flex;align-items:center;gap:5px;
+  transition:all .3s ease;font-family:inherit;
+}
+.cat-pill:hover{background:rgba(255,255,255,.1);color:#e2e8f0;border-color:rgba(255,255,255,.15)}
+.cat-pill.active{
+  background:linear-gradient(135deg,rgba(99,102,241,.3),rgba(139,92,246,.3));
+  border-color:rgba(99,102,241,.5);color:#fff;box-shadow:0 0 20px rgba(99,102,241,.2);
+}
+.cat-pill svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ===== ORBIT ===== */
+.orbit-container{position:absolute;inset:0;z-index:10;cursor:grab;touch-action:none;user-select:none}
+.orbit-container.dragging{cursor:grabbing}
+
+/* ===== NEWS CARD ===== */
+.news-card{
+  position:absolute;cursor:pointer;will-change:transform,opacity;
+  background:rgba(255,255,255,.04);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border:1px solid rgba(255,255,255,.08);border-radius:16px;overflow:hidden;
+  user-select:none;-webkit-user-select:none;
+  transition:box-shadow .4s ease,border-color .4s ease;
+}
+.news-card:hover{border-color:rgba(99,102,241,.3);box-shadow:0 0 30px rgba(99,102,241,.15),0 8px 32px rgba(0,0,0,.4)}
+.news-card.active-card{
+  border-color:rgba(99,102,241,.5);
+  box-shadow:0 0 40px rgba(99,102,241,.25),0 0 80px rgba(99,102,241,.1),0 12px 40px rgba(0,0,0,.5);
+  background:rgba(255,255,255,.07);
+}
+.news-card.expanding {
+  z-index: 1000 !important;
+  transition: transform 0.5s ease, opacity 0.3s ease;
+}
+
+.news-card.fade-out {
+  opacity: 0.2 !important;
+}
+.popup-box {
+  transform-origin: center;
+}
+.card-img-wrap{overflow:hidden;position:relative;width:100%;height:55%}
+.card-img-wrap::after{content:'';position:absolute;bottom:0;left:0;right:0;height:40%;background:linear-gradient(transparent,rgba(6,6,15,.9));pointer-events:none}
+.card-img{width:100%;height:100%;object-fit:cover;transition:transform .5s ease;display:block}
+.news-card:hover .card-img{transform:scale(1.08)}
+.card-source{
+  position:absolute;bottom:8px;left:8px;z-index:5;display:inline-flex;align-items:center;gap:4px;
+  padding:2px 8px;border-radius:10px;background:rgba(99,102,241,.15);
+  color:#a5b4fc;font-size:9px;font-weight:600;letter-spacing:.3px;text-transform:uppercase;
+}
+.card-body{padding:8px 10px;flex:1;display:flex;flex-direction:column;justify-content:space-between;min-height:0}
+.card-title{font-size:11px;font-weight:600;line-height:1.3;color:#f1f5f9;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin:0}
+.active-card .card-title{font-size:12px}
+.card-meta{display:flex;align-items:center;justify-content:space-between;margin-top:6px}
+.card-cat{display:flex;align-items:center;gap:4px}
+.card-cat-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.card-cat-label{font-size:10px;color:#64748b;font-weight:500}
+.card-time{font-size:10px;color:#475569}
+
+.bookmark-btn{
+  position:absolute;top:8px;right:8px;z-index:10;width:30px;height:30px;border-radius:50%;
+  background:rgba(0,0,0,.5);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;color:#94a3b8;padding:0;
+  transition:all .3s ease;
+}
+.bookmark-btn:hover{background:rgba(99,102,241,.3);border-color:rgba(99,102,241,.5);color:#fff;transform:scale(1.15)}
+.bookmark-btn.bookmarked{background:rgba(99,102,241,.4);border-color:rgba(99,102,241,.6);color:#818cf8}
+.bookmark-btn svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.bookmark-btn.bookmarked svg{fill:currentColor}
+
+/* ===== CENTER LABEL ===== */
+.center-label{
+  position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
+  text-align:center;z-index:5;pointer-events:none;max-width:280px;transition:opacity .4s ease;
+}
+.center-cat{display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:8px}
+.center-cat-dot{width:8px;height:8px;border-radius:50%}
+.center-cat-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px}
+.center-title{font-size:14px;font-weight:600;color:rgba(248,250,252,.55);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.center-hint{font-size:11px;color:rgba(148,163,184,.35);margin-top:6px}
+
+/* ===== POPUP OVERLAY ===== */
+.popup-overlay{
+  position:fixed;inset:0;z-index:900;
+  background:rgba(0,0,0,0);
+  backdrop-filter:blur(0px);-webkit-backdrop-filter:blur(0px);
+  pointer-events:none;
+  transition:all .5s cubic-bezier(.4,0,.2,1);
+  display:flex;align-items:center;justify-content:center;
+}
+.popup-overlay.visible{
+  background:rgba(0,0,0,.65);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  pointer-events:auto;
+}
+
+/* ===== POPUP BOX ===== */
+.popup-box{
+  width:min(520px,92vw);
+  max-height:min(600px,88vh);
+  border-radius:24px;overflow:hidden;
+  background:rgba(15,15,35,.95);
+  backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);
+  border:1px solid rgba(99,102,241,.15);
+  box-shadow:
+    0 0 80px rgba(99,102,241,.12),
+    0 25px 80px rgba(0,0,0,.6),
+    0 0 0 1px rgba(255,255,255,.03) inset;
+  transform:scale(.85) translateY(30px);
+  opacity:0;
+  transition:all .5s cubic-bezier(.175,.885,.32,1.275);
+  display:flex;flex-direction:column;
+}
+.popup-overlay.visible .popup-box{
+  transform:scale(1) translateY(0);
+  opacity:1;
+}
+
+/* Popup image */
+.popup-img-wrap{
+  position:relative;width:100%;height:220px;overflow:hidden;flex-shrink:0;
+}
+.popup-img{
+  width:100%;height:100%;object-fit:cover;
+  transition:transform 8s ease;
+}
+.popup-overlay.visible .popup-img{
+  transform:scale(1.05);
+}
+.popup-img-wrap::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:50%;
+  background:linear-gradient(transparent,rgba(15,15,35,.98));pointer-events:none;
+}
+
+/* Popup close */
+.popup-close{
+  position:absolute;top:14px;right:14px;z-index:20;
+  width:36px;height:36px;border-radius:50%;
+  background:rgba(0,0,0,.5);backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.12);
+  color:#cbd5e1;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;padding:0;transition:all .3s;
+}
+.popup-close:hover{background:rgba(239,68,68,.3);border-color:rgba(239,68,68,.5);color:#fff;transform:scale(1.1)}
+.popup-close svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* Popup floating bookmark on image */
+.popup-img-bookmark{
+  position:absolute;top:14px;left:14px;z-index:20;
+  width:36px;height:36px;border-radius:50%;
+  background:rgba(0,0,0,.5);backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.12);
+  color:#94a3b8;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;padding:0;transition:all .3s;
+}
+.popup-img-bookmark:hover{background:rgba(99,102,241,.3);border-color:rgba(99,102,241,.5);color:#fff;transform:scale(1.1)}
+.popup-img-bookmark.bookmarked{background:rgba(99,102,241,.4);border-color:rgba(99,102,241,.6);color:#818cf8}
+.popup-img-bookmark svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.popup-img-bookmark.bookmarked svg{fill:currentColor}
+
+/* Popup source badge on image */
+.popup-source-badge{
+  position:absolute;bottom:16px;left:20px;z-index:10;
+  display:inline-flex;align-items:center;gap:6px;
+  padding:4px 12px;border-radius:12px;
+  background:rgba(99,102,241,.2);
+  border:1px solid rgba(99,102,241,.3);
+  color:#c7d2fe;font-size:11px;font-weight:600;
+  letter-spacing:.5px;text-transform:uppercase;
+}
+
+/* Popup body */
+.popup-body{
+  padding:24px 28px 28px;overflow-y:auto;flex:1;
+}
+.popup-body::-webkit-scrollbar{width:4px}
+.popup-body::-webkit-scrollbar-track{background:transparent}
+.popup-body::-webkit-scrollbar-thumb{background:rgba(99,102,241,.3);border-radius:2px}
+
+.popup-category-row{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.popup-cat-badge{
+  display:flex;align-items:center;gap:5px;
+  padding:4px 12px;border-radius:12px;font-size:11px;font-weight:600;
+}
+.popup-cat-dot{width:8px;height:8px;border-radius:50%}
+.popup-time-badge{
+  display:flex;align-items:center;gap:4px;
+  font-size:11px;color:#64748b;font-weight:500;
+}
+.popup-time-badge svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+.popup-title{
+  font-size:22px;font-weight:800;line-height:1.3;
+  color:#f8fafc;margin-bottom:6px;
+  letter-spacing:-.3px;
+}
+.popup-desc{
+  font-size:14px;line-height:1.5;color:#a5b4fc;
+  margin-bottom:16px;font-weight:500;font-style:italic;
+}
+.popup-divider{
+  width:60px;height:3px;border-radius:2px;
+  background:linear-gradient(90deg,#6366f1,#8b5cf6);
+  margin-bottom:16px;
+}
+.popup-content{
+  font-size:14px;line-height:1.75;color:#94a3b8;
+  margin-bottom:24px;
+}
+
+/* Author row */
+.popup-author-row{
+  display:flex;align-items:center;gap:12px;
+  padding:14px 16px;border-radius:14px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.06);
+  margin-bottom:20px;
+}
+.popup-avatar{
+  width:40px;height:40px;border-radius:50%;
+  background:linear-gradient(135deg,#6366f1,#8b5cf6);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.popup-avatar svg{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.popup-author-info{flex:1}
+.popup-author-name{font-size:14px;font-weight:600;color:#e2e8f0}
+.popup-author-meta{font-size:12px;color:#64748b;margin-top:2px;display:flex;align-items:center;gap:8px}
+.popup-author-meta span{display:flex;align-items:center;gap:3px}
+.popup-author-meta svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* Action buttons */
+.popup-actions{display:flex;gap:10px}
+.popup-read-btn{
+  flex:1;padding:14px 20px;border-radius:14px;
+  background:linear-gradient(135deg,#6366f1,#8b5cf6);
+  border:none;color:#fff;font-size:14px;font-weight:700;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;
+  font-family:inherit;transition:all .3s;letter-spacing:.2px;
+  box-shadow:0 4px 15px rgba(99,102,241,.3);
+}
+.popup-read-btn:hover{
+  transform:translateY(-2px);
+  box-shadow:0 8px 30px rgba(99,102,241,.45);
+}
+.popup-read-btn:active{transform:translateY(0)}
+.popup-read-btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+.popup-share-btn{
+  width:48px;height:48px;border-radius:14px;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+  color:#94a3b8;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;padding:0;transition:all .3s;flex-shrink:0;
+}
+.popup-share-btn:hover{background:rgba(255,255,255,.12);color:#fff;transform:translateY(-2px)}
+.popup-share-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+.popup-bookmark-btn{
+  width:48px;height:48px;border-radius:14px;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+  color:#94a3b8;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;padding:0;transition:all .3s;flex-shrink:0;
+}
+.popup-bookmark-btn:hover{background:rgba(99,102,241,.2);border-color:rgba(99,102,241,.4);color:#fff;transform:translateY(-2px)}
+.popup-bookmark-btn.bookmarked{background:rgba(99,102,241,.25);border-color:rgba(99,102,241,.5);color:#818cf8}
+.popup-bookmark-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.popup-bookmark-btn.bookmarked svg{fill:currentColor}
+
+/* Tags */
+.popup-tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px}
+.popup-tag{
+  padding:4px 10px;border-radius:8px;font-size:11px;font-weight:500;
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);
+  color:#64748b;
+}
+
+/* ===== SCROLL HINT ===== */
+.scroll-hint{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;gap:14px;
+  color:#475569;font-size:12px;font-weight:500;z-index:10;
+  pointer-events:none;animation:hintPulse 3s ease-in-out infinite;
+}
+@keyframes hintPulse{0%,100%{opacity:.4}50%{opacity:.8}}
+.scroll-hint svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+.bottom-bar{
+  position:fixed;bottom:14px;right:20px;z-index:500;
+  display:flex;align-items:center;gap:14px;font-size:11px;color:#475569;
+}
+.bottom-bar-item{display:flex;align-items:center;gap:4px}
+.bottom-bar-item svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+.empty-state{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;color:#64748b;z-index:100}
+.empty-state svg{width:48px;height:48px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;margin-bottom:16px;opacity:.3}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:640px){
+  .header{padding:12px 14px}
+  .categories{top:62px;gap:4px;padding:4px 10px}
+  .cat-pill{padding:5px 10px;font-size:11px}
+  .auto-btn .auto-label{display:none}
+  .search-input.expanded{width:160px}
+  .popup-box{border-radius:20px}
+  .popup-img-wrap{height:180px}
+  .popup-body{padding:20px}
+  .popup-title{font-size:18px}
+  .popup-content{font-size:13px}
+  .popup-author-row{padding:10px 12px}
+  .center-title{font-size:13px}
+  .logo-text h1{font-size:14px}
+}
+@media(max-width:400px){
+  .cat-pill svg{display:none}
+  .popup-img-wrap{height:150px}
+  .popup-title{font-size:16px}
+}
+</style>
+</head>
+<body>
+
+<div class="bg-canvas"></div>
+<div class="bg-orb bg-orb-1"></div>
+<div class="bg-orb bg-orb-2"></div>
+<div class="bg-orb bg-orb-3"></div>
+<div id="stars"></div>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="logo-group">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+    </div>
+    <div class="logo-text">
+      <h1>NewsOrbit</h1>
+      <span>Live Feed</span>
+    </div>
+  </div>
+  <div class="header-controls">
+    <div class="search-wrap">
+      <button class="search-btn" id="searchToggle">
+        <svg id="searchIcon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </button>
+      <input type="text" class="search-input" id="searchInput" placeholder="Search news...">
+    </div>
+    <button class="auto-btn active" id="autoBtn">
+      <svg id="autoIcon" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+      <span class="auto-label">Pause</span>
+    </button>
+  </div>
+</header>
+
+<!-- CATEGORIES -->
+<div class="categories" id="categories"></div>
+
+<!-- ORBIT -->
+<div class="orbit-container" id="orbitContainer">
+  <div class="orbit-ring" id="orbitRing"></div>
+  <div class="orbit-ring-inner" id="orbitRingInner"></div>
+  <div id="cardsContainer"></div>
+</div>
+
+<!-- CENTER LABEL -->
+<div class="center-label" id="centerLabel">
+  <div class="center-cat">
+    <div class="center-cat-dot" id="centerCatDot"></div>
+    <span class="center-cat-label" id="centerCatLabel"></span>
+  </div>
+  <h2 class="center-title" id="centerTitle"></h2>
+  <p class="center-hint">Click card to read</p>
+</div>
+
+<!-- POPUP OVERLAY -->
+<div class="popup-overlay" id="popupOverlay">
+  <div class="popup-box" id="popupBox">
+    <!-- Image area -->
+    <div class="popup-img-wrap">
+      <img class="popup-img" id="popupImg" src="" alt="" draggable="false">
+      <button class="popup-close" id="popupClose">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <button class="popup-img-bookmark" id="popupImgBookmark">
+        <svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+      </button>
+      <span class="popup-source-badge" id="popupSource"></span>
+    </div>
+    <!-- Body -->
+    <div class="popup-body">
+      <div class="popup-category-row">
+        <div class="popup-cat-badge" id="popupCatBadge">
+          <div class="popup-cat-dot" id="popupCatDot"></div>
+          <span id="popupCatName"></span>
+        </div>
+        <div class="popup-time-badge">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span id="popupTime"></span>
+        </div>
+      </div>
+
+      <h2 class="popup-title" id="popupTitle"></h2>
+      <p class="popup-desc" id="popupDesc"></p>
+      <div class="popup-divider"></div>
+      <p class="popup-content" id="popupContent"></p>
+
+      <div class="popup-tags" id="popupTags"></div>
+
+      <!-- Author -->
+      <div class="popup-author-row">
+        <div class="popup-avatar">
+          <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <div class="popup-author-info">
+          <div class="popup-author-name" id="popupAuthor"></div>
+          <div class="popup-author-meta">
+            <span>
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <span id="popupReadTime"></span> read
+            </span>
+            <span>
+              <svg viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+              <span id="popupSourceMeta"></span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="popup-actions">
+        <button class="popup-read-btn" id="popupReadBtn">
+          Read Full Article
+          <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        </button>
+        <button class="popup-share-btn" id="popupShareBtn" title="Share">
+          <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        </button>
+        <button class="popup-bookmark-btn" id="popupBookmarkBtn" title="Bookmark">
+          <svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCROLL HINT -->
+<div class="scroll-hint" id="scrollHint">
+  <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+  <span>Scroll to explore</span>
+  <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+</div>
+
+<!-- BOTTOM BAR -->
+<div class="bottom-bar">
+  <span class="bottom-bar-item" id="articleCount"></span>
+  <span class="bottom-bar-item" id="bookmarkCount" style="display:none">
+    <svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+    <span id="bookmarkNum">0</span> saved
+  </span>
+</div>
+
+<script>
+// ============================================================
+// SVG ICONS
+// ============================================================
+const SVG = {
+  bookmark:'<svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>',
+  search:'<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+  globe:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+  zap:'<svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+  trophy:'<svg viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>',
+  briefcase:'<svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>',
+  beaker:'<svg viewBox="0 0 24 24"><path d="M4.5 3h15"/><path d="M6 3v16a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V3"/><path d="M6 14h12"/></svg>',
+  heart:'<svg viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>',
+  film:'<svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/><line x1="17" y1="17" x2="22" y2="17"/></svg>'
+};
+
+// ============================================================
+// NEWS DATA
+// ============================================================
+const NEWS_DATA = [
+  {id:1,title:"Revolutionary AI Model Surpasses Human Cognitive Benchmarks",description:"A groundbreaking artificial intelligence system achieves unprecedented scores across reasoning and creativity tests.",content:"Researchers at a leading AI lab have unveiled a new model that consistently outperforms human experts in complex reasoning tasks. The model demonstrates remarkable abilities in mathematical proof generation, creative writing, and strategic planning. This represents a significant leap forward in artificial general intelligence research, opening new possibilities in healthcare, education, and scientific discovery that were previously thought to be decades away.",source:"TechCrunch",category:"Tech",image:"https://picsum.photos/seed/aimodel/600/400",time:"2h ago",author:"Sarah Chen",readTime:"5 min",tags:["AI","Machine Learning","Research"]},
+  {id:2,title:"SpaceX Launches First Mars Habitat Module Into Orbit",description:"The first component of a permanent Mars settlement successfully reaches low Earth orbit for testing.",content:"SpaceX has achieved another historic milestone by launching the first habitation module designed for Mars colonization. The module will spend six months in Earth orbit undergoing rigorous testing before being transported to Mars. The cylindrical habitat can support four astronauts and features advanced life support, radiation shielding, and hydroponic food production systems capable of sustaining a crew for up to two years.",source:"Space.com",category:"Science",image:"https://picsum.photos/seed/spacex2024/600/400",time:"4h ago",author:"Mike Johnson",readTime:"7 min",tags:["Space","Mars","SpaceX"]},
+  {id:3,title:"Champions League Final Delivers Historic Upset Victory",description:"An underdog side stuns the footballing world with a dramatic extra-time triumph.",content:"In one of the greatest Champions League finals ever played, the underdog team overcame a two-goal deficit to win 4-3 in extra time. The match featured breathtaking goals, controversial VAR decisions, and a fairy-tale ending. The winning goal came in the 118th minute from a spectacular bicycle kick that will be replayed for generations to come.",source:"ESPN",category:"Sports",image:"https://picsum.photos/seed/championsleague/600/400",time:"6h ago",author:"James Wilson",readTime:"4 min",tags:["Football","Champions League","UEFA"]},
+  {id:4,title:"Global Markets Surge on Breakthrough Trade Agreement",description:"Major economies finalize a landmark trade deal eliminating tariffs on tech and renewable energy goods.",content:"Stock markets around the world rallied sharply after negotiators announced a comprehensive trade agreement between the world's largest economies. The deal reduces barriers on technology exports, renewable energy equipment, and digital services. Analysts predict the agreement could boost global GDP by $2.5 trillion over the next decade and create millions of new jobs in emerging sectors.",source:"Bloomberg",category:"Business",image:"https://picsum.photos/seed/stockmarket/600/400",time:"8h ago",author:"Emma Rodriguez",readTime:"6 min",tags:["Markets","Trade","Economy"]},
+  {id:5,title:"CRISPR Gene Therapy Cures Previously Untreatable Disease",description:"Patients with a rare genetic disorder show complete remission after novel gene-editing treatment.",content:"A clinical trial using advanced CRISPR-Cas9 technology has achieved remarkable results in treating a devastating genetic disease. All twelve patients in the trial showed complete remission within six months, with no significant side effects. The therapy works by precisely correcting the genetic mutation responsible for the condition, offering hope to thousands of families worldwide who have long awaited a cure.",source:"Nature",category:"Health",image:"https://picsum.photos/seed/genetherapy/600/400",time:"10h ago",author:"Dr. Lisa Park",readTime:"8 min",tags:["CRISPR","Gene Therapy","Medicine"]},
+  {id:6,title:"Quantum Computer Solves Complex Problem in Record Time",description:"The latest quantum processor completes a calculation that would take classical supercomputers thousands of years.",content:"A new quantum computing milestone has been achieved with a 1,000-qubit processor solving a complex optimization problem in just 200 seconds. The same calculation would require approximately 10,000 years on the world's most powerful classical supercomputer. This breakthrough opens doors to revolutionary advances in drug discovery, cryptography, climate modeling, and materials science.",source:"Wired",category:"Tech",image:"https://picsum.photos/seed/quantum2024/600/400",time:"12h ago",author:"David Kim",readTime:"6 min",tags:["Quantum","Computing","Physics"]},
+  {id:7,title:"Record-Breaking Film Opens with $500M Global Weekend",description:"The highly anticipated sequel shatters box office records with an extraordinary opening.",content:"The long-awaited sequel has exceeded all expectations with a global opening weekend of $500 million, breaking records in 42 countries. Critics have praised the film for its innovative visual effects, compelling narrative, and outstanding ensemble performances. The film's director described the audience response as beyond anything they could have imagined during the five years of production.",source:"Variety",category:"Entertainment",image:"https://picsum.photos/seed/boxoffice/600/400",time:"14h ago",author:"Rachel Green",readTime:"3 min",tags:["Movies","Box Office","Entertainment"]},
+  {id:8,title:"Olympic Athlete Shatters 20-Year-Old World Record",description:"A young sprinter redefines the limits of human speed by breaking an untouchable record.",content:"In a stunning performance at the World Athletics Championships, a 21-year-old sprinter broke the 100-meter world record with a time of 9.52 seconds. The record had stood for over two decades and was considered one of the most formidable marks in athletics. The crowd erupted as the electronic scoreboard confirmed the historic achievement, marking a new era in track and field.",source:"BBC Sport",category:"Sports",image:"https://picsum.photos/seed/olympic2024/600/400",time:"16h ago",author:"Tom Bradley",readTime:"4 min",tags:["Olympics","Athletics","World Record"]},
+  {id:9,title:"Major Tech Company Unveils Revolutionary AR Glasses",description:"The latest augmented reality device promises to replace smartphones with all-day wearable computing.",content:"A major technology company has revealed its next-generation AR glasses featuring a holographic display with a 120-degree field of view. The device weighs just 45 grams, offers 18-hour battery life, and includes spatial audio and hand tracking. Early reviewers describe the experience as truly transformative, suggesting we may be witnessing the beginning of the post-smartphone era.",source:"The Verge",category:"Tech",image:"https://picsum.photos/seed/arglasses/600/400",time:"18h ago",author:"Alex Turner",readTime:"5 min",tags:["AR","Wearables","Innovation"]},
+  {id:10,title:"Startup Raises $2B to Build Sustainable Aviation Fleet",description:"An electric aviation startup secures record funding for hydrogen-powered aircraft development.",content:"The aviation industry takes a giant leap toward sustainability as a startup raises $2 billion in Series D funding. The company plans to build a fleet of hydrogen-powered regional aircraft capable of carrying 80 passengers up to 1,500 miles with zero carbon emissions. First commercial flights are expected by 2028, potentially revolutionizing short-haul air travel.",source:"Forbes",category:"Business",image:"https://picsum.photos/seed/aviation/600/400",time:"20h ago",author:"Nina Patel",readTime:"5 min",tags:["Aviation","Sustainability","Startup"]},
+  {id:11,title:"Deep-Sea Expedition Discovers New Species Ecosystem",description:"Scientists find a thriving ecosystem of previously unknown species in the deepest ocean trench.",content:"A deep-sea exploration mission has discovered over 30 previously unknown species living in an isolated ecosystem at the bottom of the Mariana Trench. The organisms include bioluminescent fish, transparent crustaceans, and a new type of coral that thrives without sunlight. Scientists believe these discoveries could lead to breakthroughs in biotechnology and medicine.",source:"National Geographic",category:"Science",image:"https://picsum.photos/seed/deepsea/600/400",time:"22h ago",author:"Dr. Ocean Phillips",readTime:"7 min",tags:["Ocean","Discovery","Biology"]},
+  {id:12,title:"Mental Health App Reaches 100 Million Users Worldwide",description:"An AI-powered wellness platform achieves massive adoption with personalized therapy and meditation.",content:"A mental health technology company has reached a major milestone of 100 million global users. The app uses AI to provide personalized cognitive behavioral therapy, guided meditation exercises, and mood tracking. Clinical studies show that regular use reduces anxiety symptoms by 40% and improves sleep quality in 78% of users, making it one of the most effective digital health tools available.",source:"Health Today",category:"Health",image:"https://picsum.photos/seed/mentalhealth/600/400",time:"1d ago",author:"Maria Santos",readTime:"4 min",tags:["Mental Health","App","Wellness"]}
+];
+
+// ============================================================
+// CONFIG
+// ============================================================
+const CATEGORIES = ['All','Tech','Sports','Business','Science','Health','Entertainment'];
+const CAT_ICONS = { All:SVG.globe, Tech:SVG.zap, Sports:SVG.trophy, Business:SVG.briefcase, Science:SVG.beaker, Health:SVG.heart, Entertainment:SVG.film };
+const CAT_COLORS = { Tech:'#6366f1', Sports:'#22c55e', Business:'#f59e0b', Science:'#06b6d4', Health:'#ef4444', Entertainment:'#ec4899' };
+
+// ============================================================
+// STATE
+// ============================================================
+let rotation = 0, velocity = 0, targetRotation = null;
+let isDragging = false, lastPointer = {x:0,y:0,time:0};
+let autoRotate = true, showDetail = false, detailItemId = null;
+let activeCategory = 'All', searchQuery = '', searchExpanded = false;
+let bookmarks = new Set(), hasInteracted = false;
+let filteredNews = [...NEWS_DATA], activeIndex = 0, cardElements = [];
+
+const FRICTION=0.955, WHEEL_SENS=0.00035, DRAG_SENS=0.003;
+const AUTO_SPEED=0.004, MIN_VEL=0.00008, LERP=0.08;
+
+// ============================================================
+// DOM
+// ============================================================
+const $=id=>document.getElementById(id);
+const orbitContainer=$('orbitContainer'), cardsContainer=$('cardsContainer');
+const categoriesEl=$('categories'), centerLabel=$('centerLabel');
+const centerCatDot=$('centerCatDot'), centerCatLabel=$('centerCatLabel'), centerTitle=$('centerTitle');
+const popupOverlay=$('popupOverlay'), popupBox=$('popupBox'), popupClose=$('popupClose');
+const popupImg=$('popupImg'), popupSource=$('popupSource');
+const popupCatDot=$('popupCatDot'), popupCatName=$('popupCatName'), popupCatBadge=$('popupCatBadge');
+const popupTime=$('popupTime'), popupTitle=$('popupTitle'), popupDesc=$('popupDesc');
+const popupContent=$('popupContent'), popupAuthor=$('popupAuthor');
+const popupReadTime=$('popupReadTime'), popupSourceMeta=$('popupSourceMeta');
+const popupTags=$('popupTags');
+const popupImgBookmark=$('popupImgBookmark');
+const popupBookmarkBtn=$('popupBookmarkBtn');
+const searchToggle=$('searchToggle'), searchInput=$('searchInput'), searchIcon=$('searchIcon');
+const autoBtn=$('autoBtn'), autoIcon=$('autoIcon');
+const scrollHint=$('scrollHint');
+const articleCount=$('articleCount'), bookmarkCount=$('bookmarkCount'), bookmarkNum=$('bookmarkNum');
+const orbitRing=$('orbitRing'), orbitRingInner=$('orbitRingInner');
+
+// ============================================================
+// DIMENSIONS
+// ============================================================
+function getOrbitDims(){
+  const w=window.innerWidth;
+  if(w<500)return{rx:140,ry:90,cw:148,ch:108};
+  if(w<768)return{rx:195,ry:110,cw:170,ch:122};
+  if(w<1024)return{rx:275,ry:140,cw:200,ch:145};
+  if(w<1400)return{rx:355,ry:168,cw:225,ch:162};
+  return{rx:415,ry:188,cw:245,ch:172};
+}
+let dims=getOrbitDims();
+function getCenterXY(){return{cx:window.innerWidth/2,cy:window.innerHeight/2+20}}
+
+// ============================================================
+// STARS
+// ============================================================
+function createStars(){
+  const el=$('stars'); el.innerHTML='';
+  for(let i=0;i<55;i++){
+    const s=document.createElement('div');s.className='star';
+    const sz=Math.random()*2+1;
+    s.style.cssText=`left:${Math.random()*100}%;top:${Math.random()*100}%;width:${sz}px;height:${sz}px;opacity:${Math.random()*.4+.1};animation:twinkle ${Math.random()*4+3}s ease-in-out ${Math.random()*5}s infinite`;
+    el.appendChild(s);
+  }
+}
+
+// ============================================================
+// CATEGORIES
+// ============================================================
+function renderCategories(){
+  categoriesEl.innerHTML='';
+  CATEGORIES.forEach(cat=>{
+    const btn=document.createElement('button');
+    btn.className='cat-pill'+(activeCategory===cat?' active':'');
+    btn.innerHTML=`${CAT_ICONS[cat]||''}<span>${cat}</span>`;
+    btn.addEventListener('click',()=>{
+      activeCategory=cat; searchQuery=''; searchInput.value='';
+      filterNews(); renderCategories(); closePopup();
+      rotation=0; velocity=0; targetRotation=null;
+    });
+    categoriesEl.appendChild(btn);
+  });
+}
+
+// ============================================================
+// FILTER
+// ============================================================
+function filterNews(){
+  filteredNews=NEWS_DATA.filter(item=>{
+    const mc=activeCategory==='All'||item.category===activeCategory;
+    const ms=!searchQuery||item.title.toLowerCase().includes(searchQuery.toLowerCase())||item.description.toLowerCase().includes(searchQuery.toLowerCase());
+    return mc&&ms;
+  });
+  renderCards(); updateBottomBar();
+}
+
+// ============================================================
+// RENDER CARDS
+// ============================================================
+function renderCards(){
+  cardsContainer.innerHTML=''; cardElements=[];
+  if(filteredNews.length===0){
+    cardsContainer.innerHTML=`<div class="empty-state">${SVG.search}<p style="font-size:18px;font-weight:600">No articles found</p><p style="font-size:14px;margin-top:8px;opacity:.6">Try adjusting your search or category</p></div>`;
+    centerLabel.style.opacity='0'; return;
+  }
+  filteredNews.forEach((item,i)=>{
+    const card=document.createElement('div');
+    card.className='news-card'; card.dataset.index=i; card.dataset.id=item.id;
+    const cc=CAT_COLORS[item.category]||'#6366f1';
+    const ib=bookmarks.has(item.id);
+    card.innerHTML=`
+      <button class="bookmark-btn${ib?' bookmarked':''}" data-id="${item.id}">${SVG.bookmark}</button>
+      <div class="card-img-wrap">
+        <img class="card-img" src="${item.image}" alt="${item.title}" loading="lazy" draggable="false">
+        <span class="card-source">${item.source}</span>
+      </div>
+      <div class="card-body">
+        <h3 class="card-title">${item.title}</h3>
+        <div class="card-meta">
+          <div class="card-cat"><div class="card-cat-dot" style="background:${cc}"></div><span class="card-cat-label">${item.category}</span></div>
+          <span class="card-time">${item.time}</span>
+        </div>
+      </div>`;
+    card.addEventListener('click',e=>{if(e.target.closest('.bookmark-btn'))return;onCardClick(i)});
+    card.querySelector('.bookmark-btn').addEventListener('click',e=>{e.stopPropagation();toggleBookmark(item.id)});
+    cardsContainer.appendChild(card); cardElements.push(card);
+  });
+}
+
+// ============================================================
+// POSITIONING
+// ============================================================
+function getCardPos(index,total,rot){
+  const angle=(index/total)*Math.PI*2+rot;
+  const x=Math.sin(angle)*dims.rx, y=-Math.cos(angle)*dims.ry;
+  const depth=-Math.cos(angle), nd=(depth+1)/2;
+  return{x,y,scale:.45+nd*.65,opacity:.15+nd*.85,zIndex:Math.round(nd*100),blur:Math.max(0,(1-nd)*3),depth,angle};
+}
+function getActiveIdx(rot,total){
+  if(!total)return -1;
+  let best=0,bestD=Infinity;
+  for(let i=0;i<total;i++){
+    const a=(i/total)*Math.PI*2+rot;
+    const n=((a%(Math.PI*2))+Math.PI*2)%(Math.PI*2);
+    const d=Math.min(Math.abs(n-Math.PI),Math.PI*2-Math.abs(n-Math.PI));
+    if(d<bestD){bestD=d;best=i}
+  }
+  return best;
+}
+function getTargetRot(idx,total,cur){
+  const base=Math.PI-(idx/total)*Math.PI*2;
+  const diff=base-cur;
+  const nd=((diff+Math.PI)%(Math.PI*2)+Math.PI*2)%(Math.PI*2)-Math.PI;
+  return cur+nd;
+}
+
+// ============================================================
+// UPDATE LOOP
+// ============================================================
+function updatePositions(){
+  const{cx,cy}=getCenterXY(); const total=filteredNews.length;
+  if(!total)return;
+  activeIndex=getActiveIdx(rotation,total);
+  cardElements.forEach((card,i)=>{
+    const p=getCardPos(i,total,rotation);
+    const tx=p.x+cx-dims.cw/2, ty=p.y+cy-dims.ch/2;
+    card.style.transform=`translate(${tx}px,${ty}px) scale(${p.scale})`;
+    card.style.opacity=p.opacity; card.style.zIndex=p.zIndex;
+    card.style.filter=p.blur>.5?`blur(${p.blur}px)`:'none';
+    card.style.width=dims.cw+'px'; card.style.height=dims.ch+'px';
+    i===activeIndex?card.classList.add('active-card'):card.classList.remove('active-card');
+  });
+  orbitRing.style.cssText=`width:${dims.rx*2}px;height:${dims.ry*2}px;left:${cx-dims.rx}px;top:${cy-dims.ry}px`;
+  orbitRingInner.style.cssText=`width:${dims.rx*2-60}px;height:${dims.ry*2-30}px;left:${cx-dims.rx+30}px;top:${cy-dims.ry+15}px`;
+  if(!showDetail&&filteredNews[activeIndex]){
+    const item=filteredNews[activeIndex]; const cc=CAT_COLORS[item.category]||'#6366f1';
+    centerCatDot.style.background=cc; centerCatDot.style.boxShadow=`0 0 10px ${cc}`;
+    centerCatLabel.style.color=cc; centerCatLabel.textContent=item.category;
+    centerTitle.textContent=item.title; centerLabel.style.opacity='1';
+  }else{centerLabel.style.opacity='0'}
+}
+
+let lastTime=performance.now();
+function tick(now){
+  const dt=Math.min((now-lastTime)/16.667,3); lastTime=now;
+  if(targetRotation!==null){
+    const diff=targetRotation-rotation;
+    if(Math.abs(diff)<.005){rotation=targetRotation;targetRotation=null;velocity=0}
+    else{rotation+=diff*LERP*dt;velocity=0}
+  }else{
+    if(autoRotate&&!isDragging&&!showDetail){velocity+=AUTO_SPEED*.02*dt;if(velocity>AUTO_SPEED)velocity=AUTO_SPEED}
+    velocity*=Math.pow(FRICTION,dt);
+    if(Math.abs(velocity)<MIN_VEL)velocity=0;
+    rotation+=velocity*dt;
+  }
+  updatePositions();
+  requestAnimationFrame(tick);
+}
+
+// ============================================================
+// CARD CLICK → POPUP
+// ============================================================
+function onCardClick(idx){
+  if(!filteredNews.length)return;
+
+  const clickedCard = cardElements[idx];
+
+  // Fade other cards
+  cardElements.forEach((card,i)=>{
+    if(i !== idx){
+      card.classList.add('fade-out');
+    }
+  });
+
+  // Add expand effect
+  clickedCard.classList.add('expanding');
+
+  // Move to center
+  const {cx, cy} = getCenterXY();
+  clickedCard.style.transform = `
+    translate(${cx - dims.cw/2}px, ${cy - dims.ch/2}px)
+    scale(1.8)
+  `;
+
+  // After animation → open popup
+  setTimeout(()=>{
+    const item = filteredNews[idx];
+    detailItemId = item.id;
+    openPopup(item);
+
+    // Reset cards after popup opens
+    cardElements.forEach(card=>{
+      card.classList.remove('fade-out','expanding');
+    });
+
+  }, 400);
+}
+
+// ============================================================
+// POPUP
+// ============================================================
+function openPopup(item){
+  showDetail=true;
+  const cc=CAT_COLORS[item.category]||'#6366f1';
+
+  popupImg.src=item.image;
+  popupImg.alt=item.title;
+  popupSource.textContent=item.source;
+  popupCatDot.style.background=cc;
+  popupCatBadge.style.background=`${cc}15`;
+  popupCatBadge.style.border=`1px solid ${cc}30`;
+  popupCatName.style.color=cc;
+  popupCatName.textContent=item.category;
+  popupTime.textContent=item.time;
+  popupTitle.textContent=item.title;
+  popupDesc.textContent=item.description;
+  popupContent.textContent=item.content;
+  popupAuthor.textContent=item.author;
+  popupReadTime.textContent=item.readTime;
+  popupSourceMeta.textContent=item.source;
+
+  // Tags
+  popupTags.innerHTML='';
+  if(item.tags){
+    item.tags.forEach(t=>{
+      const tag=document.createElement('span');
+      tag.className='popup-tag'; tag.textContent='#'+t;
+      popupTags.appendChild(tag);
+    });
+  }
+
+  updatePopupBookmarks();
+  popupOverlay.classList.add('visible');
+
+  // Reset scroll
+  const body=popupBox.querySelector('.popup-body');
+  if(body) body.scrollTop=0;
+
+  // Reset image zoom
+  popupImg.style.transform='scale(1)';
+  requestAnimationFrame(()=>{popupImg.style.transform='scale(1.05)'});
+}
+
+function closePopup(){
+  showDetail=false;
+  popupOverlay.classList.remove('visible');
+  detailItemId=null;
+}
+
+function updatePopupBookmarks(){
+  const ib=detailItemId&&bookmarks.has(detailItemId);
+  [popupImgBookmark,popupBookmarkBtn].forEach(btn=>{
+    ib?btn.classList.add('bookmarked'):btn.classList.remove('bookmarked');
+  });
+}
+
+popupClose.addEventListener('click',e=>{e.stopPropagation();closePopup()});
+
+popupOverlay.addEventListener('click',e=>{
+  if(e.target===popupOverlay) closePopup();
+});
+
+popupImgBookmark.addEventListener('click',e=>{
+  e.stopPropagation();
+  if(detailItemId){toggleBookmark(detailItemId);updatePopupBookmarks()}
+});
+
+popupBookmarkBtn.addEventListener('click',e=>{
+  e.stopPropagation();
+  if(detailItemId){toggleBookmark(detailItemId);updatePopupBookmarks()}
+});
+
+// Stop propagation on popup box
+popupBox.addEventListener('pointerdown',e=>e.stopPropagation());
+popupBox.addEventListener('wheel',e=>e.stopPropagation(),{passive:true});
+
+// ============================================================
+// BOOKMARKS
+// ============================================================
+function toggleBookmark(id){
+  bookmarks.has(id)?bookmarks.delete(id):bookmarks.add(id);
+  updateBookmarkUI(id); updateBottomBar();
+}
+function updateBookmarkUI(id){
+  const btn=cardsContainer.querySelector(`.bookmark-btn[data-id="${id}"]`);
+  if(btn){bookmarks.has(id)?btn.classList.add('bookmarked'):btn.classList.remove('bookmarked')}
+}
+function updateBottomBar(){
+  articleCount.textContent=`${filteredNews.length} article${filteredNews.length!==1?'s':''}`;
+  if(bookmarks.size>0){bookmarkCount.style.display='flex';bookmarkNum.textContent=bookmarks.size}
+  else{bookmarkCount.style.display='none'}
+}
+
+// ============================================================
+// SEARCH
+// ============================================================
+searchToggle.addEventListener('click',()=>{
+  searchExpanded=!searchExpanded;
+  if(searchExpanded){
+    searchInput.classList.add('expanded');
+    searchIcon.innerHTML='<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>';
+    setTimeout(()=>searchInput.focus(),150);
+  }else{
+    searchInput.classList.remove('expanded');
+    searchIcon.innerHTML='<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>';
+    searchQuery=''; searchInput.value=''; filterNews();
+    rotation=0; velocity=0; targetRotation=null;
+  }
+});
+searchInput.addEventListener('input',()=>{
+  searchQuery=searchInput.value; filterNews();
+  rotation=0; velocity=0; targetRotation=null; closePopup();
+});
+searchInput.addEventListener('pointerdown',e=>e.stopPropagation());
+
+// ============================================================
+// AUTO-ROTATE
+// ============================================================
+autoBtn.addEventListener('click',()=>{
+  autoRotate=!autoRotate;
+  if(autoRotate){
+    autoBtn.classList.add('active');
+    autoIcon.innerHTML='<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
+    autoBtn.querySelector('.auto-label').textContent='Pause';
+  }else{
+    autoBtn.classList.remove('active');
+    autoIcon.innerHTML='<polygon points="5 3 19 12 5 21 5 3"/>';
+    autoBtn.querySelector('.auto-label').textContent='Auto';
+  }
+});
+
+// ============================================================
+// ORBIT EVENTS
+// ============================================================
+orbitContainer.addEventListener('wheel',e=>{
+  e.preventDefault();
+  hasInteracted=true; scrollHint.style.display='none';
+  targetRotation=null;
+  if(showDetail)closePopup();
+  velocity+=e.deltaY*WHEEL_SENS;
+},{passive:false});
+
+orbitContainer.addEventListener('pointerdown',e=>{
+  if(e.target.closest('.bookmark-btn')||e.target.closest('.popup-overlay'))return;
+  isDragging=true; hasInteracted=true; scrollHint.style.display='none';
+  targetRotation=null; velocity=0;
+  lastPointer={x:e.clientX,y:e.clientY,time:performance.now()};
+  orbitContainer.classList.add('dragging');
+  orbitContainer.setPointerCapture(e.pointerId);
+});
+
+orbitContainer.addEventListener('pointermove',e=>{
+  if(!isDragging)return;
+  const dx=e.clientX-lastPointer.x;
+  const now=performance.now();
+  const dt=Math.max(now-lastPointer.time,1);
+  rotation+=dx*DRAG_SENS*.05;
+  velocity=(dx*DRAG_SENS*.05)/(dt/16.667);
+  lastPointer={x:e.clientX,y:e.clientY,time:now};
+});
+
+function onPointerUp(){isDragging=false;orbitContainer.classList.remove('dragging')}
+orbitContainer.addEventListener('pointerup',onPointerUp);
+orbitContainer.addEventListener('pointercancel',onPointerUp);
+
+// ============================================================
+// KEYBOARD
+// ============================================================
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    if(showDetail)closePopup();
+    if(searchExpanded){
+      searchExpanded=false;searchInput.classList.remove('expanded');
+      searchIcon.innerHTML='<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>';
+      searchQuery='';searchInput.value='';filterNews();
+    }
+  }
+  if(document.activeElement===searchInput)return;
+  if(e.key==='ArrowRight'||e.key==='ArrowDown'){
+    hasInteracted=true;scrollHint.style.display='none';
+    targetRotation=null;closePopup();velocity+=.02;
+  }
+  if(e.key==='ArrowLeft'||e.key==='ArrowUp'){
+    hasInteracted=true;scrollHint.style.display='none';
+    targetRotation=null;closePopup();velocity-=.02;
+  }
+  if(e.key==='Enter'&&filteredNews.length>0&&!showDetail) onCardClick(activeIndex);
+});
+
+// ============================================================
+// RESIZE
+// ============================================================
+window.addEventListener('resize',()=>{dims=getOrbitDims();updatePositions()});
+
+// ============================================================
+// INIT
+// ============================================================
+createStars();
+renderCategories();
+filterNews();
+updatePositions();
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>
