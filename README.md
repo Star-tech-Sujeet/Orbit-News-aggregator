@@ -69,6 +69,5 @@ A futuristic orbit-based UI displaying news in an interactive circular motion.
 
 Sujit Kumar, Ajmal sehzad shaik,Hamd khan
 
-📜 License
 
-This project is open-source and free to use.
+
